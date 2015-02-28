@@ -15,14 +15,14 @@ const configName = "linode-inventory.ini"
 
 var args struct {
 	list    bool
-	host    bool
 	version bool
+	ini     string
 }
 
 func init() {
 	flag.BoolVar(&args.list, "list", false, "Print Ansible formatted inventory")
-	flag.BoolVar(&args.host, "host", false, "no-op since all information is given via --list")
 	flag.BoolVar(&args.version, "v", false, "Print version")
+	flag.StringVar(&args.ini, "ini", configName, "File to load the config from")
 }
 
 var config *configuration
@@ -33,7 +33,11 @@ const usage = "usage: %s [flag]\n"
 func main() {
 	flag.Parse()
 	var err error
-	config, err = getConfig()
+	if args.ini != configName && args.ini != "" {
+		config, err = getConfig(args.ini)
+	} else {
+		config, err = getConfig(configName)
+	}
 	if err != nil {
 		fatal(err)
 		return
@@ -48,11 +52,6 @@ func main() {
 			return
 		}
 		os.Stdout.Write(inventoryJSON)
-		return
-	}
-	if args.host {
-		// empty hash
-		fmt.Fprint(os.Stdout, "{}")
 		return
 	}
 	if args.version {
@@ -77,16 +76,16 @@ func (c *configuration) filterDisplayGroup(displayGroup string) bool {
 	return c.DisplayGroup == displayGroup
 }
 
-func getConfig() (*configuration, error) {
+func getConfig(filename string) (*configuration, error) {
 	// first check directory where the executable is located
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return nil, err
 	}
-	path := dir + "/" + configName
+	path := dir + "/" + filename
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// fallback to working directory. This is usefull when using `go run`
-		path = configName
+		path = filename
 	}
 
 	var config struct {
