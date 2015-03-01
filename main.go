@@ -14,15 +14,13 @@ import (
 const configName = "linode-inventory.ini"
 
 var args struct {
-	list    bool
 	version bool
 	ini     string
 }
 
 func init() {
-	flag.BoolVar(&args.list, "list", false, "Print Ansible formatted inventory")
 	flag.BoolVar(&args.version, "v", false, "Print version")
-	flag.StringVar(&args.ini, "ini", configName, "File to load the config from")
+	flag.StringVar(&args.ini, "f", configName, "Specify config file")
 }
 
 var config *configuration
@@ -33,18 +31,23 @@ const usage = "usage: %s [flag]\n"
 func main() {
 	flag.Parse()
 	var err error
-	if args.ini != configName && args.ini != "" {
-		config, err = getConfig(args.ini)
-	} else {
-		config, err = getConfig(configName)
-	}
-	if err != nil {
-		fatal(err)
-		return
-	}
-	linodeClient = linode.NewClient(config.APIKey)
+	config, err = getConfig(args.ini)
 
-	if args.list {
+	if err != nil {
+		if args.ini != configName {
+			fatal(err)
+			return
+		} else {
+			flag.PrintDefaults()
+			return
+		}
+	}
+
+	if args.version {
+		fmt.Printf("%s v%s\n", appName, appVersion)
+		return
+	} else {
+		linodeClient = linode.NewClient(config.APIKey)
 		inv := newInventory(linodes())
 		inventoryJSON, err := inv.toJSON()
 		if err != nil {
@@ -52,10 +55,6 @@ func main() {
 			return
 		}
 		os.Stdout.Write(inventoryJSON)
-		return
-	}
-	if args.version {
-		fmt.Printf("%s v%s\n", appName, appVersion)
 		return
 	}
 

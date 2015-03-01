@@ -2,5 +2,5 @@ package main
 
 const (
 	appName    = "linode-inventory"
-	appVersion = "0.1.0"
+	appVersion = "0.1.2"
 )
